@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
+import { Resend } from 'resend'
+import { addToWaitlist, getWaitlistCount, isSupabaseConfigured } from '@/lib/supabase'
+
+// Fallback to JSON storage if Supabase is not configured
 import { promises as fs } from 'fs'
 import path from 'path'
-import { Resend } from 'resend'
+
+interface WaitlistData {
+  emails: string[]
+  count: number
+}
 
 // Only initialize Resend if API key is available
 const getResend = () => {
@@ -11,12 +20,8 @@ const getResend = () => {
   return new Resend(process.env.RESEND_API_KEY)
 }
 
-interface WaitlistData {
-  emails: string[]
-  count: number
-}
-
-async function getWaitlistData(): Promise<WaitlistData> {
+// JSON fallback functions
+async function getJsonWaitlistData(): Promise<WaitlistData> {
   const dataPath = path.join(process.cwd(), 'data', 'waitlist.json')
   try {
     const data = await fs.readFile(dataPath, 'utf-8')
@@ -26,7 +31,7 @@ async function getWaitlistData(): Promise<WaitlistData> {
   }
 }
 
-async function saveWaitlistData(data: WaitlistData): Promise<void> {
+async function saveJsonWaitlistData(data: WaitlistData): Promise<void> {
   const dataPath = path.join(process.cwd(), 'data', 'waitlist.json')
   await fs.writeFile(dataPath, JSON.stringify(data, null, 2))
 }
@@ -68,7 +73,7 @@ async function sendWelcomeEmail(email: string, position: number): Promise<void> 
                     <tr>
                       <td style="background-color: #171717; border-radius: 16px; padding: 40px; border: 1px solid #262626;">
                         <h1 style="color: #fafafa; font-size: 28px; margin: 0 0 20px 0; text-align: center;">
-                          You're In! 🎉
+                          You're In!
                         </h1>
 
                         <p style="color: #a1a1aa; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; text-align: center;">
@@ -138,29 +143,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
-    // Get current data
-    const data = await getWaitlistData()
+    let position: number
+    let isExisting = false
 
-    // Check for duplicates
-    if (data.emails.includes(email.toLowerCase())) {
+    // Try Supabase first, fallback to JSON
+    if (isSupabaseConfigured()) {
+      // Get request metadata for analytics
+      const headersList = await headers()
+      const metadata = {
+        ip_address: headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || undefined,
+        user_agent: headersList.get('user-agent') || undefined,
+        referrer: headersList.get('referer') || undefined,
+      }
+
+      const result = await addToWaitlist(email, metadata)
+
+      if (!result.success) {
+        console.error('Supabase error:', result.error)
+        return NextResponse.json(
+          { error: 'Something went wrong. Please try again.' },
+          { status: 500 }
+        )
+      }
+
+      position = result.position!
+      isExisting = result.isExisting || false
+    } else {
+      // Fallback to JSON storage
+      console.log('Using JSON storage fallback')
+      const data = await getJsonWaitlistData()
+      const normalizedEmail = email.toLowerCase()
+
+      // Check for duplicates
+      if (data.emails.includes(normalizedEmail)) {
+        return NextResponse.json(
+          { message: "You're already on the list!", position: data.emails.indexOf(normalizedEmail) + 1 },
+          { status: 200 }
+        )
+      }
+
+      // Add new email
+      data.emails.push(normalizedEmail)
+      data.count = data.emails.length
+      position = data.count
+
+      // Save data
+      await saveJsonWaitlistData(data)
+    }
+
+    // Return early if already on list
+    if (isExisting) {
       return NextResponse.json(
-        { message: "You're already on the list!", position: data.emails.indexOf(email.toLowerCase()) + 1 },
+        { message: "You're already on the list!", position },
         { status: 200 }
       )
     }
 
-    // Add new email
-    data.emails.push(email.toLowerCase())
-    data.count = data.emails.length
-
-    // Save data
-    await saveWaitlistData(data)
-
-    // Send welcome email
-    await sendWelcomeEmail(email, data.count)
+    // Send welcome email for new signups
+    await sendWelcomeEmail(email, position)
 
     return NextResponse.json(
-      { message: "You're on the list!", position: data.count },
+      { message: "You're on the list!", position },
       { status: 201 }
     )
   } catch (error) {
@@ -171,8 +214,16 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const data = await getWaitlistData()
-    return NextResponse.json({ count: data.count })
+    let count: number
+
+    if (isSupabaseConfigured()) {
+      count = await getWaitlistCount()
+    } else {
+      const data = await getJsonWaitlistData()
+      count = data.count
+    }
+
+    return NextResponse.json({ count })
   } catch {
     return NextResponse.json({ count: 0 })
   }
