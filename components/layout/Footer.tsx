@@ -53,8 +53,8 @@ export function Footer() {
 
             <p className="text-muted-foreground text-sm">
               Contact:{' '}
-              <a href="mailto:hello@daydayup.co" className="hover:text-accent transition-colors">
-                hello@daydayup.co
+              <a href="mailto:hello@contextgraph.tech" className="hover:text-accent transition-colors">
+                hello@contextgraph.tech
               </a>
             </p>
           </div>

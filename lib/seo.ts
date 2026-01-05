@@ -5,7 +5,7 @@ export const siteConfig = {
   description:
     'The marketplace for AI decision traces. Turn tribal knowledge into searchable precedent for autonomous agents. Join the waitlist for early access.',
   url: 'https://contextgraph.tech',
-  email: 'hello@daydayup.co',
+  email: 'hello@contextgraph.tech',
   keywords: [
     'context graph',
     'context graph marketplace',

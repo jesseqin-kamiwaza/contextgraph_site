@@ -40,7 +40,7 @@ async function sendWelcomeEmail(email: string, position: number): Promise<void> 
 
   try {
     await resend.emails.send({
-      from: 'Context Graph <hello@daydayup.co>',
+      from: 'Context Graph <hello@contextgraph.tech>',
       to: email,
       subject: "You're on the Context Graph waitlist!",
       html: `
@@ -95,7 +95,7 @@ async function sendWelcomeEmail(email: string, position: number): Promise<void> 
                         </ul>
 
                         <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; text-align: center;">
-                          Have questions? Reply to this email or reach us at <a href="mailto:hello@daydayup.co" style="color: #f97316;">hello@daydayup.co</a>
+                          Have questions? Reply to this email or reach us at <a href="mailto:hello@contextgraph.tech" style="color: #f97316;">hello@contextgraph.tech</a>
                         </p>
                       </td>
                     </tr>
