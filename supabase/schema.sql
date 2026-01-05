@@ -74,3 +74,57 @@ COMMENT ON COLUMN waitlist.position IS 'Waitlist position number';
 COMMENT ON COLUMN waitlist.ip_address IS 'IP address of signup (for rate limiting)';
 COMMENT ON COLUMN waitlist.user_agent IS 'Browser user agent string';
 COMMENT ON COLUMN waitlist.referrer IS 'Referrer URL if available';
+
+-- ===========================================
+-- Received Emails Table
+-- ===========================================
+
+-- Create the received_emails table to store incoming emails
+CREATE TABLE IF NOT EXISTS received_emails (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email_id TEXT NOT NULL UNIQUE,           -- Resend email ID
+  from_address TEXT NOT NULL,
+  to_addresses TEXT[] NOT NULL,
+  subject TEXT,
+  html_body TEXT,
+  text_body TEXT,
+  has_attachments BOOLEAN DEFAULT FALSE,
+  attachment_count INTEGER DEFAULT 0,
+  forwarded_to TEXT,                        -- Where the email was forwarded
+  forwarded_at TIMESTAMP WITH TIME ZONE,
+  received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for received_emails
+CREATE INDEX IF NOT EXISTS idx_received_emails_from ON received_emails(from_address);
+CREATE INDEX IF NOT EXISTS idx_received_emails_received_at ON received_emails(received_at DESC);
+
+-- Enable RLS for received_emails
+ALTER TABLE received_emails ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow inserts from the API (webhook handler)
+CREATE POLICY "Allow API inserts" ON received_emails
+  FOR INSERT
+  TO anon
+  WITH CHECK (true);
+
+-- Policy: Allow reading for authenticated users or service role
+CREATE POLICY "Allow reading" ON received_emails
+  FOR SELECT
+  TO anon
+  USING (true);
+
+-- Policy: Service role full access
+CREATE POLICY "Service role full access on received_emails" ON received_emails
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- Comments for documentation
+COMMENT ON TABLE received_emails IS 'Stores incoming emails received via Resend webhook';
+COMMENT ON COLUMN received_emails.email_id IS 'Unique Resend email identifier';
+COMMENT ON COLUMN received_emails.from_address IS 'Sender email address';
+COMMENT ON COLUMN received_emails.to_addresses IS 'Array of recipient addresses';
+COMMENT ON COLUMN received_emails.forwarded_to IS 'Email address where this was forwarded';

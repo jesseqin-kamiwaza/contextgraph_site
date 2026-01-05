@@ -101,3 +101,98 @@ export async function getWaitlistEntries(limit = 100, offset = 0): Promise<Waitl
 
   return data || []
 }
+
+// ===========================================
+// Received Emails Operations
+// ===========================================
+
+export interface ReceivedEmail {
+  id: string
+  email_id: string
+  from_address: string
+  to_addresses: string[]
+  subject: string | null
+  html_body: string | null
+  text_body: string | null
+  has_attachments: boolean
+  attachment_count: number
+  forwarded_to: string | null
+  forwarded_at: string | null
+  received_at: string
+  created_at: string
+}
+
+export interface SaveReceivedEmailParams {
+  email_id: string
+  from_address: string
+  to_addresses: string[]
+  subject?: string
+  html_body?: string
+  text_body?: string
+  has_attachments?: boolean
+  attachment_count?: number
+  forwarded_to?: string
+  forwarded_at?: Date
+}
+
+export async function saveReceivedEmail(
+  params: SaveReceivedEmailParams
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping email storage')
+    return { success: false, error: 'Supabase not configured' }
+  }
+
+  const { error } = await supabase.from('received_emails').insert({
+    email_id: params.email_id,
+    from_address: params.from_address,
+    to_addresses: params.to_addresses,
+    subject: params.subject || null,
+    html_body: params.html_body || null,
+    text_body: params.text_body || null,
+    has_attachments: params.has_attachments || false,
+    attachment_count: params.attachment_count || 0,
+    forwarded_to: params.forwarded_to || null,
+    forwarded_at: params.forwarded_at?.toISOString() || null,
+  })
+
+  if (error) {
+    console.error('Failed to save received email:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+export async function getReceivedEmails(
+  limit = 50,
+  offset = 0
+): Promise<ReceivedEmail[]> {
+  if (!supabase) {
+    return []
+  }
+
+  const { data } = await supabase
+    .from('received_emails')
+    .select('*')
+    .order('received_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  return data || []
+}
+
+export async function getReceivedEmailById(
+  emailId: string
+): Promise<ReceivedEmail | null> {
+  if (!supabase) {
+    return null
+  }
+
+  const { data } = await supabase
+    .from('received_emails')
+    .select('*')
+    .eq('email_id', emailId)
+    .single()
+
+  return data
+}
