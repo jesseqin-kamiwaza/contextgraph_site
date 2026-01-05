@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Ensure Tailwind preflight is applied */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+}
+
 :root {
   --background: #0a0a0a;
   --foreground: #fafafa;
@@ -26,12 +38,6 @@
   --color-card-foreground: var(--card-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 html {
