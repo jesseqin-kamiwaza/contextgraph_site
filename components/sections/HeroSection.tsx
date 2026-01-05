@@ -13,44 +13,34 @@ export function HeroSection() {
   const formRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const elements = [badgeRef.current, headingRef.current, taglineRef.current, formRef.current]
+
+    // Only animate if all elements exist
+    if (!elements.every(el => el)) return
+
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
 
-    gsap.set([badgeRef.current, headingRef.current, taglineRef.current, formRef.current], {
-      y: 40,
-      autoAlpha: 0,
-    })
-
-    tl.to(badgeRef.current, {
-      y: 0,
-      autoAlpha: 1,
-      duration: 0.6,
-      delay: 0.5,
-    })
-      .to(
+    tl.fromTo(
+      badgeRef.current,
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.6, delay: 0.2 }
+    )
+      .fromTo(
         headingRef.current,
-        {
-          y: 0,
-          autoAlpha: 1,
-          duration: 0.8,
-        },
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8 },
         '-=0.3'
       )
-      .to(
+      .fromTo(
         taglineRef.current,
-        {
-          y: 0,
-          autoAlpha: 1,
-          duration: 0.6,
-        },
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6 },
         '-=0.4'
       )
-      .to(
+      .fromTo(
         formRef.current,
-        {
-          y: 0,
-          autoAlpha: 1,
-          duration: 0.6,
-        },
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6 },
         '-=0.3'
       )
 

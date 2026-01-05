@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, ReactNode } from 'react'
+import { useRef, useEffect, ReactNode, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
@@ -20,12 +20,12 @@ export function TextReveal({
   children,
   animation = 'slideUp',
   delay = 0,
-  duration = 0.8,
+  duration = 0.6,
   className = '',
   as: Component = 'div',
-  stagger = 0,
 }: TextRevealProps) {
   const ref = useRef<HTMLElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
     const element = ref.current
@@ -33,43 +33,60 @@ export function TextReveal({
 
     const animations = {
       slideUp: {
-        from: { y: 60, autoAlpha: 0 },
-        to: { y: 0, autoAlpha: 1 },
+        from: { y: 30, opacity: 0 },
+        to: { y: 0, opacity: 1 },
       },
       fadeIn: {
-        from: { autoAlpha: 0 },
-        to: { autoAlpha: 1 },
+        from: { opacity: 0 },
+        to: { opacity: 1 },
       },
       scaleIn: {
-        from: { scale: 0.8, autoAlpha: 0 },
-        to: { scale: 1, autoAlpha: 1 },
+        from: { scale: 0.95, opacity: 0 },
+        to: { scale: 1, opacity: 1 },
       },
     }
 
     const anim = animations[animation]
 
+    // Set initial state
     gsap.set(element, anim.from)
 
-    const tween = gsap.to(element, {
-      ...anim.to,
-      duration,
-      delay,
-      ease: 'power3.out',
-      scrollTrigger: {
-        trigger: element,
-        start: 'top 85%',
-        toggleActions: 'play none none reverse',
+    const scrollTrigger = ScrollTrigger.create({
+      trigger: element,
+      start: 'top 92%',
+      onEnter: () => {
+        if (!isVisible) {
+          setIsVisible(true)
+          gsap.to(element, {
+            ...anim.to,
+            duration,
+            delay,
+            ease: 'power2.out',
+          })
+        }
       },
     })
 
-    return () => {
-      tween.kill()
+    // Fallback: if element is already in view, animate immediately
+    const rect = element.getBoundingClientRect()
+    if (rect.top < window.innerHeight * 0.92 && !isVisible) {
+      setIsVisible(true)
+      gsap.to(element, {
+        ...anim.to,
+        duration,
+        delay,
+        ease: 'power2.out',
+      })
     }
-  }, [animation, delay, duration, stagger])
+
+    return () => {
+      scrollTrigger.kill()
+    }
+  }, [animation, delay, duration, isVisible])
 
   return (
     // @ts-expect-error - dynamic component type
-    <Component ref={ref} className={className} style={{ visibility: 'hidden' }}>
+    <Component ref={ref} className={className}>
       {children}
     </Component>
   )
